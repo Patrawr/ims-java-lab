@@ -35,24 +35,24 @@ public class MyIMSJavaApplication {
 			
 			// Exercise 5 - Insert a record into the database with a SQL INSERT 
 			// Exercise 6 - Updating the database with a SQL UPDATE and validate contents
-			executeASqlInsertOrUpdate();
-			executeAndDisplaySqlQuery();
+//			executeASqlInsertOrUpdate();
+//			executeAndDisplaySqlQuery();
 						
 			// Exercise 7 - Establishing a distributed IMS DL/I Connection
-			//createAnImsDliConnection(4).close();
+//			createAnImsDliConnection(4).close();
 						
 			// Exercise 8 - Read all records with GU and GN DL/I calls
-			//readAllRecordsWithDliGuGnCalls();
+//			readAllRecordsWithDliGuGnCalls();
 			
 			// Exercise 9 - Read a specific record with a DL/I GU call and a qualification
-			//readASpecificRecordWithDliGu();
+//			readASpecificRecordWithDliGu();
 
 			// Exercise 10 - Update a specific record with a DL/I GHU and REPL call
 			//updateASpecificRecordWithDliGhuRepl();
-			//readASpecificRecordWithDliGu();
+//			readASpecificRecordWithDliGu();
 			
 			// Exercise 11 - Writing a native IMS application
-			//executeNativeApplication();
+			executeNativeApplication();
 		} catch (Exception e) {
 			System.out.println("Abnormal error occurred: " + e.getMessage());
 			e.printStackTrace();
@@ -80,7 +80,14 @@ public class MyIMSJavaApplication {
 		} else if (driverType == 2) {
 			// A Type-2 JDBC connection is used for local access on the mainframe
 			// Exercise 7: Retrieve a Type-2 JDBC connection and set it to the connection object
+			IMSDataSource ds = new IMSDataSource();
+			//ds.setUser("guy");
+			//ds.setPassword("poopsy");
+			ds.setDatabaseName("xml://PHIDPHO1");
+			ds.setDriverType(2);
+			ds.setLoginTimeout(30);
 			
+			connection = ds.getConnection();
 		} else {
 			throw new Exception("Invalid driver type specified: " + driverType);
 		}
@@ -175,11 +182,18 @@ public class MyIMSJavaApplication {
 			// Exercise 7: Create a distributed DL/I connection and a PSB object
 			// Define your connection properties
 			IMSConnectionSpec imsConnSpec = IMSConnectionSpecFactory.createIMSConnectionSpec();
+			imsConnSpec.setDatastoreServer("9.232.60.91");
+			imsConnSpec.setPortNumber(2500);
+			imsConnSpec.setDatabaseName("xml://PHIDPHO1");
+//			imsConnSpec.setUser("myUser");
+//			imsConnSpec.setPassword("myPass");
+			imsConnSpec.setDriverType(driverType);
 			
 			// Create your PSB object
 			psb = PSBFactory.createPSB(imsConnSpec);
 		} else if (driverType == 2) {
 			IMSConnectionSpec imsConnSpec = IMSConnectionSpecFactory.createIMSConnectionSpec();
+			
 			
 			psb = PSBFactory.createPSB(imsConnSpec);
 		} else {
@@ -194,6 +208,18 @@ public class MyIMSJavaApplication {
 		
 		// Exercise 8 - Read from the database using GU/GN calls
 		// Prepare and issue the GU call
+		PCB pcb = psb.getPCB("PCB01");
+		SSAList ssaList = pcb.getSSAList("A1111111");
+		
+		Path path = ssaList.getPathForRetrieveReplace();
+		pcb.getUnique(path, ssaList, false);
+		
+		
+		while (pcb.getNext(path, ssaList, false)) {
+			System.out.println();
+			System.out.println("FIRSTNAME: " + path.getString("FIRSTNAME"));
+			System.out.println("LASTNAME: " + path.getString("LASTNAME"));
+		}
 		
 		psb.commit();
 		psb.close();
@@ -204,6 +230,20 @@ public class MyIMSJavaApplication {
 		
 		// Exercise 9 - Read a specific record with a DL/I GU call and a qualification
 		// Prepare and issue the GU call
+		
+		PCB pcb = psb.getPCB("PCB01");
+		SSAList ssaList = pcb.getSSAList("A1111111");
+		ssaList.addInitialQualification("A1111111", "LASTNAME", SSAList.EQUALS, "CONSTABLE");
+		Path path = ssaList.getPathForRetrieveReplace();
+		
+		pcb.getUnique(path, ssaList, false);
+		
+		System.out.println("FIRSTNAME: " + path.getString("FIRSTNAME"));
+		System.out.println("LASTNAME: " + path.getString("LASTNAME"));
+		
+		while(pcb.getNext(path, ssaList, false)) {
+			System.out.println("FIRSTNAME: " + path.getString("FIRSTNAME"));
+		}
 		
 		psb.commit();
 		psb.close();
@@ -228,7 +268,19 @@ public class MyIMSJavaApplication {
         Transaction transaction = app.getTransaction();
         
 		// Do some work by displaying your updated record
-		String sql = "SELECT * FROM PCB01.A1111111 WHERE LASTNAME='REPLACE'";
+		String sql = "SELECT * FROM PCB01.A1111111 WHERE LASTNAME='CONSTABLE'";
+		Statement st = connection.createStatement();
+		ResultSet rs = st.executeQuery(sql);
+		
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int colCount = rsmd.getColumnCount();
+		
+		while(rs.next()) {
+			for(int i = 1; i <= colCount; i++) {
+				System.out.println(rsmd.getColumnName(i) + ": " + rs.getString(i));
+			}	
+			System.out.println();
+		}
 		
 		// Commit your unit of work and cleanup your code
 		connection.close();
