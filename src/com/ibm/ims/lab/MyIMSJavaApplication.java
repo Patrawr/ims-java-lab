@@ -1,6 +1,7 @@
 package com.ibm.ims.lab;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
@@ -15,6 +16,7 @@ import com.ibm.ims.dli.SSAList;
 import com.ibm.ims.dli.tm.Application;
 import com.ibm.ims.dli.tm.ApplicationFactory;
 import com.ibm.ims.dli.tm.Transaction;
+import com.ibm.ims.jdbc.IMSDataSource;
 
 public class MyIMSJavaApplication {
 	public static void main(String[] args) {
@@ -33,8 +35,8 @@ public class MyIMSJavaApplication {
 			
 			// Exercise 5 - Insert a record into the database with a SQL INSERT 
 			// Exercise 6 - Updating the database with a SQL UPDATE and validate contents
-			//executeASqlInsertOrUpdate();
-			//executeAndDisplaySqlQuery();
+			executeASqlInsertOrUpdate();
+			executeAndDisplaySqlQuery();
 						
 			// Exercise 7 - Establishing a distributed IMS DL/I Connection
 			//createAnImsDliConnection(4).close();
@@ -64,6 +66,16 @@ public class MyIMSJavaApplication {
 			// A Type-4 JDBC connection is used for distributed access over TCP/IP.
 			// Exercise 1: Retrieve a Type-4 JDBC connection and set it to the connection object
 			// Exercise 2: Change the connection to use a local XML file PHIPHO1.xml
+			IMSDataSource ds = new IMSDataSource();
+			ds.setHost("9.232.60.91");
+			ds.setPortNumber(2500);
+			//ds.setUser("guy");
+			//ds.setPassword("poopsy");
+			ds.setDatabaseName("xml://PHIDPHO1");
+			ds.setDriverType(4);
+			ds.setLoginTimeout(30);
+			
+			connection = ds.getConnection();
 			
 		} else if (driverType == 2) {
 			// A Type-2 JDBC connection is used for local access on the mainframe
@@ -82,6 +94,22 @@ public class MyIMSJavaApplication {
 		
 		// Exercise 2 - Use the JDBC DatabaseMetadata interface to print out 
 		// database metadata information taken from the IMS catalog
+		DatabaseMetaData dbmd = connection.getMetaData();
+		//ResultSet rs = dbmd.getSchemas("PHIDPHO1",null);
+//		ResultSet rs = dbmd.getTables("PHIDPHO1","PCB01",null,null);
+		ResultSet rs = dbmd.getColumns("PHIDPHO1","PCB01","A1111111",null);
+		
+		
+		
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int colCount = rsmd.getColumnCount();
+		
+		while(rs.next()) {
+			for(int i = 1; i <= colCount; i++) {
+				System.out.println(rsmd.getColumnName(i) + ": " + rs.getString(i));
+			}
+			
+		}
 		
 		connection.commit();
 		connection.close();
@@ -92,6 +120,18 @@ public class MyIMSJavaApplication {
 		
 		// Exercise 3 - Issue a SQL SELECT statement and display it's output
 		String sql = "SELECT * FROM PCB01.A1111111";
+		Statement st = connection.createStatement();
+		ResultSet rs = st.executeQuery(sql);
+		
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int colCount = rsmd.getColumnCount();
+		
+		while(rs.next()) {
+			for(int i = 1; i <= colCount; i++) {
+				System.out.println(rsmd.getColumnName(i) + ": " + rs.getString(i));
+			}
+			
+		}
 		
 		connection.commit();
 		connection.close();
@@ -104,6 +144,8 @@ public class MyIMSJavaApplication {
 		// the DL/I equivalent for a sql query
 		String sql = "SELECT * FROM PCB01.A1111111";
 		
+		System.out.println(connection.nativeSQL(sql));
+		
 		connection.commit();
 		connection.close();
 	}
@@ -113,11 +155,14 @@ public class MyIMSJavaApplication {
 		Connection connection = createAnImsConnection(4);
 		
 		// Exercise 5 - Issue a SQL INSERT
-		//sql = "INSERT INTO PCB01.A1111111 (LASTNAME, FIRSTNAME, EXTENTION, ZIPCODE) VALUES ('REPLACE', 'REPLACE', 'REPLACE', 'REPLACE')";
-		
+		sql = "INSERT INTO PCB01.A1111111 (LASTNAME, FIRSTNAME, EXTENTION, ZIPCODE) VALUES ('CONSTABLE', 'SIR', '18889283', '19870')";
+		Statement st = connection.createStatement();
+		System.out.println("Inserted" + st.executeUpdate(sql) + "records");
 		
 		// Exercise 6 - Issue a SQL UPDATE
-		//sql = "UPDATE PCB01.A1111111 SET FIRSTNAME='REPLACE' WHERE LASTNAME='REPLACE'";
+		sql = "UPDATE PCB01.A1111111 SET FIRSTNAME='PATRICK' WHERE LASTNAME='CONSTABLE'";
+		Statement st1 = connection.createStatement();
+		System.out.println("Updated" + st.executeUpdate(sql) + "records");
 		
 		connection.commit();
 		connection.close();
